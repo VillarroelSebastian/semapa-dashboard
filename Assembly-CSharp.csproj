@@ -58,6 +58,9 @@
   <ItemGroup>
     <Compile Include="Assets\0.2 Scripts\PointSystem\PointManager.cs" />
     <Compile Include="Assets\0.2 Scripts\PointSystem\WallPoint.cs" />
+    <Compile Include="Assets\0.2 Scripts\GameplayScripts\PG_Player2Controller.cs" />
+    <Compile Include="Assets\0.2 Scripts\GameplayScripts\PG_Player1Controller.cs" />
+    <Compile Include="Assets\0.2 Scripts\GameplayScripts\PG_BallController.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">

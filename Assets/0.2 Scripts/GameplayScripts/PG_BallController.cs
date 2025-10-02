@@ -1,21 +1,22 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class PG_BallController : MonoBehaviour
 {
-    public float speed = 8f; // velocidad inicial
+    public float speed = 8f; 
     private Rigidbody2D rb;
+    private Vector2 startPosition; 
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        startPosition = transform.position; 
 
-        // Dar un empujón inicial aleatorio
         LaunchBall();
     }
 
     void LaunchBall()
     {
-        // Dirección aleatoria izquierda o derecha
+      
         float x = Random.Range(0, 2) == 0 ? -1 : 1;
         float y = Random.Range(-1f, 1f);
 
@@ -25,8 +26,8 @@ public class PG_BallController : MonoBehaviour
 
     public void ResetBall()
     {
-        // Reinicia en el centro con nueva dirección
-        transform.position = Vector2.zero;
+     
+        transform.position = startPosition;
         LaunchBall();
     }
 }

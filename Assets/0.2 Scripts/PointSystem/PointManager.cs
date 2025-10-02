@@ -19,12 +19,12 @@ public class PointManager : MonoBehaviour
     public void AddPointToP1()
     {
         scoreP1++;
-        scoreTextP1.text = "Player 1: " + scoreP1;
+        scoreTextP1.text = "Player 2: " + scoreP1;
     }
 
     public void AddPointToP2()
     {
         scoreP2++;
-        scoreTextP2.text = "Player 2: " + scoreP2;
+        scoreTextP2.text = "Player 1: " + scoreP2;
     }
 }

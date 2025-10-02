@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class WallPoint : MonoBehaviour
 {
@@ -17,6 +17,9 @@ public class WallPoint : MonoBehaviour
             {
                 PointManager.instance.AddPointToP2();
             }
+            collision.GetComponent<PG_BallController>().ResetBall();
         }
+
+
     }
 }
