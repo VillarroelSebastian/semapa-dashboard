@@ -1,9 +1,14 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Unity
+=======
+# Unity generated folders
+>>>>>>> origin/feature/Arts
 Library/
 Temp/
 Logs/
 obj/
+<<<<<<< HEAD
 
 # Visual Studio
 .vs/
@@ -41,3 +46,7 @@ sysinfo.txt
 # Cache de paquetes
 Packages/com.unity.package-manager/
 >>>>>>> origin/feature/gameplay
+=======
+.vsconfig
+.vs/
+>>>>>>> origin/feature/Arts
