@@ -61,6 +61,10 @@
     <Compile Include="Assets\0.2 Scripts\GameplayScripts\PG_Player2Controller.cs" />
     <Compile Include="Assets\0.2 Scripts\GameplayScripts\PG_Player1Controller.cs" />
     <Compile Include="Assets\0.2 Scripts\GameplayScripts\PG_BallController.cs" />
+    <Compile Include="Assets\0.2 Scripts\MenuPrincipal.cs" />
+    <Compile Include="Assets\0.2 Scripts\menuPuntual.cs" />
+    <Compile Include="Assets\0.2 Scripts\MenuLose.cs" />
+    <Compile Include="Assets\0.2 Scripts\BackgroundMusic.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">

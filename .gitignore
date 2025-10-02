@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Unity
 =======
 # Unity generated folders
@@ -16,6 +17,8 @@ obj/
 *.suo
 *.sln.docstates
 =======
+=======
+>>>>>>> origin/feature/Menus
 # Archivos y carpetas de Visual Studio
 .vs/
 *.csproj
@@ -44,9 +47,13 @@ obj/
 sysinfo.txt
 
 # Cache de paquetes
+<<<<<<< HEAD
 Packages/com.unity.package-manager/
 >>>>>>> origin/feature/gameplay
 =======
 .vsconfig
 .vs/
 >>>>>>> origin/feature/Arts
+=======
+Packages/com.unity.package-manager/
+>>>>>>> origin/feature/Menus
