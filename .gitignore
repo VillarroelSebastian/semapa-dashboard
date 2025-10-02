@@ -1,5 +1,11 @@
-# Unity generated folders
+# Unity
 Library/
 Temp/
 Logs/
 obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.sln.docstates
