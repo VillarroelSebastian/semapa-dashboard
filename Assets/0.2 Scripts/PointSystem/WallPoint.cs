@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 
 public class WallPoint : MonoBehaviour
 {
@@ -7,19 +8,14 @@ public class WallPoint : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.CompareTag("Ball"))
-        {
-            if (wallOwner == WallOwner.Player1)
-            {
-                PointManager.instance.AddPointToP1();
-            }
-            else if (wallOwner == WallOwner.Player2)
-            {
-                PointManager.instance.AddPointToP2();
-            }
-            collision.GetComponent<PG_BallController>().ResetBall();
-        }
+        if (!collision.CompareTag("Ball")) return;
 
+        if (wallOwner == WallOwner.Player1)
+            PointManager.instance.AddPointToP1();
+        else
+            PointManager.instance.AddPointToP2();
 
+        var ball = collision.GetComponent<PG_BallController>();
+        if (ball != null) ball.ResetBall();
     }
 }
