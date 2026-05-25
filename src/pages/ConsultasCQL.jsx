@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, Cell
@@ -10,6 +10,25 @@ import {
   topConsumidoresPorDistrito, coberturaAntenas, demandaProyectada5Anos,
   impactoCambioTarifa, medidoresSinReporte, proyeccionIngresosTarifa
 } from '../data/mockData';
+import {
+  getConsumoHora, transformConsumoHora,
+  getConsumoSemana, transformComparativa,
+  getConsumoExcesivo, getMedidoresResumenZona,
+} from '../api/semapa';
+
+// ── Colores hardcoded para el panel CQL (tema oscuro propio) ──────
+const C = {
+  sidebar:  '#1e293b',
+  sideItem: '#0f172a',
+  border:   '#334155',
+  muted:    '#94a3b8',
+  teal:     '#0d9488',
+  ocean:    '#0369a1',
+  amber:    '#b45309',
+  rose:     '#be123c',
+  text:     '#f1f5f9',
+  subtext:  '#94a3b8',
+};
 
 const COLORS = ['#0ea5e9', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#14b8a6', '#8b5cf6', '#f43f5e', '#06b6d4'];
 
@@ -94,7 +113,7 @@ function ResultTable({ headers, rows }) {
                 <td key={j} style={{
                   fontWeight: j === 0 ? 600 : 400,
                   color: j === row.length - 1 && typeof cell === 'string' && cell.includes('%') ?
-                    (parseFloat(cell) > 30 ? 'var(--danger)' : 'var(--accent)') : 'var(--text)'
+                    (parseFloat(cell) > 30 ? '#be123c' : '#0d9488') : 'var(--text)'
                 }}>{cell}</td>
               ))}
             </tr>
@@ -105,16 +124,48 @@ function ResultTable({ headers, rows }) {
   );
 }
 
+const HOY  = new Date().toISOString().split('T')[0];
+const MES  = HOY.substring(0, 7);
+const ANIO = HOY.substring(0, 4);
+const DISTRITOS_COMP = ['TUNARI', 'MOLLE', 'ALEJO CALATAYUD', 'VALLE HERMOSO'];
+
 export default function ConsultasCQL() {
   const [activeQ, setActiveQ] = useState(1);
+  const [liveQ1, setLiveQ1]   = useState(null);
+  const [liveQ2, setLiveQ2]   = useState(null);
+  const [liveQ3, setLiveQ3]   = useState(null);
+  const [liveQ4, setLiveQ4]   = useState(null);
+  const [apiVivo, setApiVivo] = useState(false);
+
+  useEffect(() => {
+    getConsumoHora('TUNARI', HOY)
+      .then(d => { if (d.length > 0) { setLiveQ1(transformConsumoHora(d)); setApiVivo(true); }})
+      .catch(() => {});
+
+    Promise.all(DISTRITOS_COMP.map(d => getConsumoSemana(d, ANIO).catch(() => [])))
+      .then(results => {
+        const byD = Object.fromEntries(DISTRITOS_COMP.map((d, i) => [d, results[i]]));
+        const merged = transformComparativa(byD);
+        if (merged.length > 0) setLiveQ2(merged);
+      })
+      .catch(() => {});
+
+    getConsumoExcesivo(MES)
+      .then(d => { if (d.length > 0) setLiveQ3(d); })
+      .catch(() => {});
+
+    getMedidoresResumenZona()
+      .then(d => { if (d.length > 0) { setLiveQ4(d); setApiVivo(true); }})
+      .catch(() => {});
+  }, []);
 
   const renderQuery = () => {
     switch (activeQ) {
-      case 1: return <Query1 />;
-      case 2: return <Query2 />;
-      case 3: return <Query3 />;
-      case 4: return <Query4 />;
-      case 5: return <Query5 />;
+      case 1: return <Query1 liveData={liveQ1} />;
+      case 2: return <Query2 liveData={liveQ2} />;
+      case 3: return <Query3 liveData={liveQ3} />;
+      case 4: return <Query4 liveData={liveQ4} />;
+      case 5: return <Query5 liveData={liveQ4} />;
       case 6: return <Query6 />;
       case 7: return <Query7 />;
       case 8: return <Query8 />;
@@ -129,7 +180,7 @@ export default function ConsultasCQL() {
       case 20: return <Query20 />;
       case 21: return <Query21 />;
       case 22: return <Query22 />;
-      default: return <div style={{ color: 'var(--text-muted)', padding: 24 }}>Selecciona una consulta</div>;
+      default: return <div style={{ color: '#94a3b8', padding: 24 }}>Selecciona una consulta</div>;
     }
   };
 
@@ -143,14 +194,17 @@ export default function ConsultasCQL() {
         <div className="page-header-badges">
           <div className="badge-pill">Keyspace: semapa_iot</div>
           <div className="badge-pill">RF: 2 | CL: QUORUM</div>
-          <div className="badge-pill live">⬤ Clúster 2 nodos</div>
+          <div className={`badge-pill ${apiVivo ? 'live' : ''}`} style={apiVivo ? {} : {background:'#fef3c7',color:'#92400e',borderColor:'#fcd34d'}}>
+            <span style={{width:6,height:6,borderRadius:'50%',background:'currentColor',display:'inline-block'}} />
+            {apiVivo ? 'API en vivo' : 'Simulado'}
+          </div>
         </div>
       </div>
 
       <div style={{ display: 'flex', height: 'calc(100vh - 60px)', overflow: 'hidden' }}>
         {/* Panel lateral de consultas */}
-        <div style={{ width: 320, background: 'var(--dark-2)', borderRight: '1px solid var(--border)', overflowY: 'auto', padding: '16px 12px', flexShrink: 0 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12, paddingLeft: 8 }}>
+        <div style={{ width: 320, background: '#1e293b', borderRight: '1px solid #334155', overflowY: 'auto', padding: '16px 12px', flexShrink: 0 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12, paddingLeft: 8 }}>
             Consultas disponibles
           </div>
           {QUERIES.map(q => (
@@ -166,18 +220,18 @@ export default function ConsultasCQL() {
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                 <span style={{
                   width: 22, height: 22, borderRadius: 5, flexShrink: 0,
-                  background: q.puntos ? 'linear-gradient(135deg,#ef4444,#f59e0b)' : (activeQ === q.id ? 'var(--primary)' : 'var(--dark-3)'),
+                  background: q.puntos ? 'linear-gradient(135deg,#ef4444,#f59e0b)' : (activeQ === q.id ? '#0d9488' : '#334155'),
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 10, fontWeight: 800, color: 'white', marginTop: 1
                 }}>
                   {q.id}
                 </span>
                 <div>
-                  <div style={{ fontSize: 12, color: activeQ === q.id ? 'white' : 'var(--text-muted)', lineHeight: 1.4, fontWeight: activeQ === q.id ? 600 : 400 }}>
+                  <div style={{ fontSize: 12, color: activeQ === q.id ? 'white' : '#94a3b8', lineHeight: 1.4, fontWeight: activeQ === q.id ? 600 : 400 }}>
                     {q.title}
                   </div>
                   {q.puntos && (
-                    <span style={{ fontSize: 10, color: 'var(--warning)', fontWeight: 700 }}>★ Con puntos</span>
+                    <span style={{ fontSize: 10, color: '#b45309', fontWeight: 700 }}>★ Con puntos</span>
                   )}
                 </div>
               </div>
@@ -198,10 +252,10 @@ export default function ConsultasCQL() {
 
 function QueryHeader({ num, title, puntos }) {
   return (
-    <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
+    <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #e2e8f0' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
         <span style={{
-          background: puntos ? 'linear-gradient(135deg,#ef4444,#f59e0b)' : 'linear-gradient(135deg, var(--primary), var(--secondary))',
+          background: puntos ? 'linear-gradient(135deg,#ef4444,#f59e0b)' : 'linear-gradient(135deg, #0d9488, #0369a1)',
           color: 'white', borderRadius: 8, padding: '4px 12px', fontWeight: 800, fontSize: 14
         }}>Q{num}</span>
         {puntos && <span className="chip chip-warning">★ Con puntos evaluación</span>}
@@ -211,8 +265,9 @@ function QueryHeader({ num, title, puntos }) {
   );
 }
 
-function Query1() {
-  const data = consumoPorDistritoHorario.filter(d => d.distrito === 'TUNARI');
+function Query1({ liveData }) {
+  const chartData = liveData ?? consumoPorDistritoHorario.filter(d => d.distrito === 'TUNARI');
+  const isLive = !!liveData;
   return (
     <div>
       <QueryHeader num={1} title="¿Consumo promedio por distrito en un rango de 8 horas?" puntos />
@@ -251,24 +306,30 @@ GROUP BY distrito, rango_horas;`} />
           ['ALEJO CALATAYUD', '16:00-24:00', '4,987,654', '1,662,551'],
         ]}
       />
+      {isLive && (
+        <div style={{ marginBottom: 10, fontSize: 11, color: '#0d9488', fontWeight: 600 }}>
+          ★ Datos en vivo desde Cassandra — TUNARI · {HOY}
+        </div>
+      )}
       <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={consumoPorDistritoHorario.filter(d => ['TUNARI','MOLLE','ALEJO CALATAYUD'].includes(d.distrito))}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-          <XAxis dataKey="rango" stroke="#94a3b8" fontSize={11} />
-          <YAxis stroke="#94a3b8" fontSize={11} tickFormatter={v => (v/1_000_000).toFixed(1)+'M'} />
+        <BarChart data={isLive ? chartData : consumoPorDistritoHorario.filter(d => ['TUNARI','MOLLE','ALEJO CALATAYUD'].includes(d.distrito))}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+          <XAxis dataKey={isLive ? 'hora' : 'rango'} stroke="#94a3b8" fontSize={10} interval={isLive ? 2 : 0} />
+          <YAxis stroke="#94a3b8" fontSize={11} tickFormatter={v => isLive ? (v/1000).toFixed(0)+'k L' : (v/1_000_000).toFixed(1)+'M'} />
           <Tooltip content={<CustomTooltip />} />
-          <Legend />
-          <Bar dataKey="consumo" name="Consumo m³" fill="#0ea5e9" radius={[4,4,0,0]} />
+          <Bar dataKey="consumo" name={isLive ? 'Consumo (litros)' : 'Consumo m³'} fill="#0ea5e9" radius={[4,4,0,0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
   );
 }
 
-function Query2() {
+function Query2({ liveData }) {
+  const chartData = liveData ?? comparativa4Semanas;
   return (
     <div>
       <QueryHeader num={2} title="¿Comparativa de consumo entre las 4 últimas semanas de 3+ distritos?" puntos />
+      {liveData && <div style={{ marginBottom: 10, fontSize: 11, color: '#0d9488', fontWeight: 600 }}>★ Datos en vivo desde Cassandra</div>}
       <CqlCode code={`-- Tabla: consumo_semanal_distrito
 -- Partition Key: anio_mes | Clustering: semana, distrito
 
@@ -297,7 +358,7 @@ ORDER BY semana ASC;`} />
         ]}
       />
       <ResponsiveContainer width="100%" height={240}>
-        <LineChart data={comparativa4Semanas}>
+        <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
           <XAxis dataKey="semana" stroke="#94a3b8" fontSize={12} />
           <YAxis stroke="#94a3b8" fontSize={11} tickFormatter={v => (v/1000).toFixed(0)+'k'} />
@@ -312,11 +373,15 @@ ORDER BY semana ASC;`} />
   );
 }
 
-function Query3() {
-  const excesivos = contratosExcesivos.filter(c => c.consumoM3 > 45);
+function Query3({ liveData }) {
+  const isLive = !!liveData && liveData.length > 0;
+  const excesivos = isLive
+    ? liveData
+    : contratosExcesivos.filter(c => c.consumoM3 > 45);
   return (
     <div>
       <QueryHeader num={3} title="¿Identificación de contratos con consumo excesivo? (>45 m³ residencial)" puntos />
+      {isLive && <div style={{ marginBottom: 10, fontSize: 11, color: '#0d9488', fontWeight: 600 }}>★ Datos en vivo desde Cassandra</div>}
       <CqlCode code={`-- Tabla: contratos_consumo_excesivo
 -- Partition Key: tarifa | Clustering: consumo_m3 DESC
 
@@ -340,24 +405,33 @@ WHERE tarifa IN ('Residencial R1','Residencial R2','Residencial R3','Residencial
   AND consumo_m3 > 45
 ORDER BY consumo_m3 DESC
 LIMIT 100 ALLOW FILTERING;`} />
-      <div style={{ marginBottom: 12, padding: '10px 14px', background: 'rgba(14,165,233,0.1)', borderRadius: 8, border: '1px solid rgba(14,165,233,0.2)', fontSize: 12, color: 'var(--text-muted)' }}>
-        <strong style={{ color: 'var(--primary)' }}>Umbral ONU:</strong> 300 litros/hab/día × 30 días × 5 habitantes = <strong>45 m³/mes</strong>
+      <div style={{ marginBottom: 12, padding: '10px 14px', background: 'rgba(14,165,233,0.1)', borderRadius: 8, border: '1px solid rgba(14,165,233,0.2)', fontSize: 12, color: '#94a3b8' }}>
+        <strong style={{ color: '#0d9488' }}>Umbral ONU:</strong> 300 litros/hab/día × 30 días × 5 habitantes = <strong>45 m³/mes</strong>
       </div>
       <ResultTable
-        headers={['Contrato', 'Tarifa', 'Consumo Litros', 'Consumo m³', 'Exceso %']}
-        rows={excesivos.map(c => [
-          c.contrato, c.tarifa, c.consumoLitros.toLocaleString(), c.consumoM3.toFixed(1),
-          c.excesoPct > 0 ? `+${c.excesoPct.toFixed(2)}%` : `${c.excesoPct.toFixed(2)}%`
-        ])}
+        headers={['Contrato', 'Tarifa', 'Consumo m³', 'Exceso %']}
+        rows={isLive
+          ? excesivos.slice(0, 20).map(c => [
+              c.contrato ?? c.numero_contrato, c.tarifa,
+              (c.consumo_m3 ?? c.consumoM3 ?? 0).toFixed(1),
+              c.exceso_porcentaje != null ? `+${c.exceso_porcentaje.toFixed(2)}%` : `+${((c.consumo_m3 - 45) / 45 * 100).toFixed(2)}%`,
+            ])
+          : excesivos.map(c => [
+              c.contrato, c.tarifa, c.consumoM3.toFixed(1),
+              c.excesoPct > 0 ? `+${c.excesoPct.toFixed(2)}%` : `${c.excesoPct.toFixed(2)}%`,
+            ])
+        }
       />
     </div>
   );
 }
 
-function Query4() {
+function Query4({ liveData }) {
+  const isLive = !!liveData && liveData.length > 0;
   return (
     <div>
       <QueryHeader num={4} title="¿Cuántos medidores están actualmente activos en cada distrito y zona?" puntos />
+      {isLive && <div style={{ marginBottom: 10, fontSize: 11, color: '#0d9488', fontWeight: 600 }}>★ Datos en vivo desde Cassandra</div>}
       <CqlCode code={`-- Tabla: estado_medidores_zona
 -- Partition Key: distrito | Clustering: zona
 
@@ -379,19 +453,26 @@ WHERE distrito IN ('TUNARI', 'MOLLE', 'ALEJO CALATAYUD')
 ORDER BY zona ASC;`} />
       <ResultTable
         headers={['Distrito', 'Zona', 'Medidores Activos', 'Fuera de Servicio', 'Estado']}
-        rows={medidoresActivosPorZona.map(m => [
-          m.distrito, m.zona, m.activos.toLocaleString(), m.inactivos.toLocaleString(),
-          m.inactivos / (m.activos + m.inactivos) < 0.1 ? '✅ Normal' : '⚠️ Atención'
+        rows={(isLive ? liveData.slice(0, 20) : medidoresActivosPorZona).map(m => [
+          m.distrito ?? m.distrito, m.zona,
+          (m.activos ?? m.activos ?? 0).toLocaleString(),
+          (m.inactivos ?? m.inactivos ?? 0).toLocaleString(),
+          (m.inactivos ?? 0) / ((m.activos ?? 0) + (m.inactivos ?? 0) + 1) < 0.1 ? 'Normal' : 'Atención',
         ])}
       />
     </div>
   );
 }
 
-function Query5() {
+function Query5({ liveData }) {
+  const isLive = !!liveData && liveData.length > 0;
+  const fueraDeServicio = isLive
+    ? liveData.filter(m => m.inactivos > 0).sort((a, b) => b.inactivos - a.inactivos).slice(0, 20)
+    : medidoresFueraDeSservicio;
   return (
     <div>
       <QueryHeader num={5} title="¿Cuántos medidores están fuera de servicio y en qué distritos/zonas?" puntos />
+      {isLive && <div style={{ marginBottom: 10, fontSize: 11, color: '#0d9488', fontWeight: 600 }}>★ Datos en vivo desde Cassandra</div>}
       <CqlCode code={`-- Tabla: medidores_sin_reporte
 -- Partition Key: distrito | Clustering: zona, mac_medidor
 
@@ -414,7 +495,10 @@ GROUP BY distrito, zona
 ORDER BY medidores_fuera_servicio DESC;`} />
       <ResultTable
         headers={['Distrito', 'Zona', 'Medidores Fuera de Servicio']}
-        rows={medidoresFueraDeSservicio.map(m => [m.distrito, m.zona, m.fueraDeSservicio.toLocaleString()])}
+        rows={fueraDeServicio.map(m => [
+          m.distrito, m.zona,
+          isLive ? (m.inactivos ?? 0).toLocaleString() : m.fueraDeSservicio.toLocaleString()
+        ])}
       />
     </div>
   );
@@ -603,13 +687,13 @@ SELECT COUNT(*) AS total_medidores,
 FROM semapa_iot.medidores;`} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 16 }}>
         {[
-          { label: 'Total Medidores', val: '120,000', color: 'var(--primary)' },
-          { label: 'Medidores >4 años', val: '6,256', color: 'var(--warning)' },
-          { label: '% Fuera de Garantía', val: '5.21%', color: 'var(--danger)' },
+          { label: 'Total Medidores', val: '120,000', color: '#0d9488' },
+          { label: 'Medidores >4 años', val: '6,256', color: '#b45309' },
+          { label: '% Fuera de Garantía', val: '5.21%', color: '#be123c' },
         ].map((item, i) => (
-          <div key={i} style={{ background: 'var(--dark-3)', borderRadius: 10, padding: '20px', textAlign: 'center' }}>
+          <div key={i} style={{ background: '#334155', borderRadius: 10, padding: '20px', textAlign: 'center' }}>
             <div style={{ fontSize: 28, fontWeight: 800, color: item.color }}>{item.val}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{item.label}</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>{item.label}</div>
           </div>
         ))}
       </div>
@@ -834,16 +918,16 @@ FROM semapa_iot.contratos_tarifa
 WHERE tarifa = 'Preferencial';`} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16 }}>
         {[
-          { label: 'Contratos Preferencial (P)', val: d.nroContratosP.toLocaleString(), color: 'var(--primary)' },
+          { label: 'Contratos Preferencial (P)', val: d.nroContratosP.toLocaleString(), color: '#0d9488' },
           { label: 'Consumo Total m³', val: d.consumoM3.toLocaleString(), color: 'var(--text)' },
-          { label: 'Ingreso actual (P @ $4.58)', val: `$us ${d.ingresoActualP_USD.toLocaleString()}`, color: 'var(--warning)' },
-          { label: 'Ingreso nuevo (R4 @ $8.69)', val: `$us ${d.ingresoNuevoR4_USD.toLocaleString()}`, color: 'var(--accent)' },
-          { label: 'Incremento en $us', val: `+$us ${d.incrementoUSD.toLocaleString()}`, color: 'var(--danger)' },
-          { label: 'Incremento en Bs', val: `+Bs ${d.incrementoBs.toLocaleString()}`, color: 'var(--danger)' },
+          { label: 'Ingreso actual (P @ $4.58)', val: `$us ${d.ingresoActualP_USD.toLocaleString()}`, color: '#b45309' },
+          { label: 'Ingreso nuevo (R4 @ $8.69)', val: `$us ${d.ingresoNuevoR4_USD.toLocaleString()}`, color: '#0d9488' },
+          { label: 'Incremento en $us', val: `+$us ${d.incrementoUSD.toLocaleString()}`, color: '#be123c' },
+          { label: 'Incremento en Bs', val: `+Bs ${d.incrementoBs.toLocaleString()}`, color: '#be123c' },
         ].map((item, i) => (
-          <div key={i} style={{ background: 'var(--dark-3)', borderRadius: 10, padding: '16px', textAlign: 'center' }}>
+          <div key={i} style={{ background: '#334155', borderRadius: 10, padding: '16px', textAlign: 'center' }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: item.color }}>{item.val}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{item.label}</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>{item.label}</div>
           </div>
         ))}
       </div>
@@ -912,21 +996,21 @@ ORDER BY ingresos_usd DESC;`} />
                 <td style={{ fontWeight: 600 }}>{row.categoria}</td>
                 <td><span className="chip chip-info">{row.alias}</span></td>
                 <td style={{ textAlign: 'right' }}>{row.consumoM3.toLocaleString()}</td>
-                <td style={{ textAlign: 'right', color: 'var(--accent)', fontWeight: 700 }}>
+                <td style={{ textAlign: 'right', color: '#0d9488', fontWeight: 700 }}>
                   ${row.ingresoUSD.toLocaleString()}
                 </td>
-                <td style={{ textAlign: 'right', color: 'var(--primary)' }}>
+                <td style={{ textAlign: 'right', color: '#0d9488' }}>
                   Bs {row.ingresoBs.toLocaleString()}
                 </td>
               </tr>
             ))}
-            <tr style={{ background: 'var(--dark-3)' }}>
+            <tr style={{ background: '#334155' }}>
               <td colSpan={2} style={{ fontWeight: 700 }}>TOTAL</td>
               <td style={{ textAlign: 'right', fontWeight: 700 }}>{proyeccionIngresosTarifa.reduce((a, b) => a + b.consumoM3, 0).toLocaleString()}</td>
-              <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--accent)', fontSize: 14 }}>
+              <td style={{ textAlign: 'right', fontWeight: 800, color: '#0d9488', fontSize: 14 }}>
                 ${proyeccionIngresosTarifa.reduce((a, b) => a + b.ingresoUSD, 0).toLocaleString()}
               </td>
-              <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--primary)', fontSize: 14 }}>
+              <td style={{ textAlign: 'right', fontWeight: 800, color: '#0d9488', fontSize: 14 }}>
                 Bs {proyeccionIngresosTarifa.reduce((a, b) => a + b.ingresoBs, 0).toLocaleString()}
               </td>
             </tr>
