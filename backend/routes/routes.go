@@ -23,6 +23,8 @@ func SetupRouter() *gin.Engine {
 		api.GET("/facturacion/distrito", controllers.GetFacturacionDistrito)
 		api.GET("/medidores/resumen-zona", controllers.GetMedidoresResumenZona)
 		api.GET("/kpis/resumen", controllers.GetKPIsResumen)
+		api.GET("/consumo/tarifa-distrito", controllers.GetConsumoTarifaDistrito)
+		api.GET("/conexiones/radiobase", controllers.GetConexionesRadiobase)
 	}
 
 	return r

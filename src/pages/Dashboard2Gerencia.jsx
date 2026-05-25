@@ -83,7 +83,8 @@ const estadoContratos = [
 const HOY = new Date().toISOString().split('T')[0];      // YYYY-MM-DD
 const MES = HOY.substring(0, 7);                         // YYYY-MM
 const ANIO = HOY.substring(0, 4);                        // YYYY
-const DISTRITOS_COMP = ['TUNARI', 'MOLLE', 'ALEJO CALATAYUD', 'VALLE HERMOSO'];
+// Los 6 distritos del Cercado de Cochabamba
+const DISTRITOS_COMP = ['TUNARI', 'MOLLE', 'ALEJO CALATAYUD', 'VALLE HERMOSO', 'ITOCTA', 'ADELA ZAMUDIO'];
 
 export default function Dashboard2Gerencia() {
   const [consumoHorario, setConsumoHorario]       = useState(consumoHorarioMock);
@@ -270,10 +271,12 @@ export default function Dashboard2Gerencia() {
                 <YAxis stroke="#94a3b8" fontSize={11} tickFormatter={v => (v/1000).toFixed(0)+'k'} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
-                <Line type="monotone" dataKey="TUNARI" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 5 }} />
-                <Line type="monotone" dataKey="MOLLE" stroke="#10b981" strokeWidth={3} dot={{ r: 5 }} />
-                <Line type="monotone" dataKey="ALEJO CALATAYUD" stroke="#6366f1" strokeWidth={3} dot={{ r: 5 }} />
-                <Line type="monotone" dataKey="VALLE HERMOSO" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} strokeDasharray="5 3" />
+                <Line type="monotone" dataKey="TUNARI" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="MOLLE" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="ALEJO CALATAYUD" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="VALLE HERMOSO" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="ITOCTA" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="4 2" />
+                <Line type="monotone" dataKey="ADELA ZAMUDIO" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="4 2" />
               </LineChart>
             </ResponsiveContainer>
           </div>

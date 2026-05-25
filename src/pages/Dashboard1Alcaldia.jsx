@@ -40,15 +40,14 @@ const CT = ({ active, payload, label }) => {
 /* ══════════════════════════════════════════════════
    MAPA GEOGRÁFICO — Cochabamba (CartoDB Positron)
    ══════════════════════════════════════════════════ */
+// 6 sub-alcaldías del Cercado de Cochabamba — coordenadas reales aproximadas
 const DISTRICT_GEO = [
-  { name:'TUNARI',      lat:-17.368, lng:-66.154, stress:82, consumo:132300, medidores:28450, cobertura:94,  color:'#be123c' },
-  { name:'MOLLE',       lat:-17.398, lng:-66.179, stress:78, consumo:100200, medidores:24100, cobertura:89,  color:'#dc2626' },
-  { name:'ALEJO C.',    lat:-17.418, lng:-66.138, stress:71, consumo:78000,  medidores:18900, cobertura:83,  color:'#ea580c' },
-  { name:'VALLE H.',    lat:-17.432, lng:-66.166, stress:65, consumo:95100,  medidores:21800, cobertura:91,  color:'#d97706' },
-  { name:'ITOCTA',      lat:-17.447, lng:-66.122, stress:58, consumo:68900,  medidores:15600, cobertura:76,  color:'#65a30d' },
-  { name:'ADELA Z.',    lat:-17.383, lng:-66.196, stress:54, consumo:62000,  medidores:14200, cobertura:88,  color:'#059669' },
-  { name:'SACABA',      lat:-17.392, lng:-66.062, stress:45, consumo:45000,  medidores:12100, cobertura:85,  color:'#0891b2' },
-  { name:'QUILLACOLLO', lat:-17.391, lng:-66.281, stress:38, consumo:38000,  medidores:10800, cobertura:79,  color:'#0369a1' },
+  { name:'TUNARI',         lat:-17.367, lng:-66.151, stress:82, consumo:132300, medidores:28450, cobertura:94,  color:'#be123c' },
+  { name:'MOLLE',          lat:-17.400, lng:-66.178, stress:78, consumo:100200, medidores:24100, cobertura:89,  color:'#dc2626' },
+  { name:'ALEJO CALATAYUD',lat:-17.420, lng:-66.135, stress:71, consumo:78000,  medidores:18900, cobertura:83,  color:'#ea580c' },
+  { name:'VALLE HERMOSO',  lat:-17.432, lng:-66.163, stress:65, consumo:95100,  medidores:21800, cobertura:91,  color:'#d97706' },
+  { name:'ITOCTA',         lat:-17.449, lng:-66.125, stress:58, consumo:68900,  medidores:15600, cobertura:76,  color:'#65a30d' },
+  { name:'ADELA ZAMUDIO',  lat:-17.384, lng:-66.197, stress:54, consumo:62000,  medidores:14200, cobertura:88,  color:'#059669' },
 ];
 const MAX_CONSUMO = Math.max(...DISTRICT_GEO.map(d => d.consumo));
 
@@ -138,16 +137,14 @@ const TIME_PERIODS = [
   { id:'T7', label:'Noche',     range:'21–24 h', mult:0.34 },
 ];
 
-/* Distritos con base de intensidad */
+/* 6 sub-alcaldías del Cercado — intensidad de demanda base */
 const HM_ROWS = [
-  { name:'TUNARI',       base:0.88 },
-  { name:'MOLLE',        base:0.83 },
-  { name:'ALEJO C.',     base:0.76 },
-  { name:'VALLE H.',     base:0.78 },
-  { name:'ITOCTA',       base:0.68 },
-  { name:'ADELA Z.',     base:0.62 },
-  { name:'SACABA',       base:0.55 },
-  { name:'QUILLACOLLO',  base:0.46 },
+  { name:'TUNARI',          base:0.88 },
+  { name:'MOLLE',           base:0.83 },
+  { name:'ALEJO CALATAYUD', base:0.76 },
+  { name:'VALLE HERMOSO',   base:0.78 },
+  { name:'ITOCTA',          base:0.68 },
+  { name:'ADELA ZAMUDIO',   base:0.62 },
 ];
 
 /* Ruido determinístico para realismo */

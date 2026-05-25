@@ -2,10 +2,9 @@
 // DATOS SIMULADOS - SEMAPA COCHABAMBA
 // ============================================================
 
+// Solo las 6 sub-alcaldías del Cercado de Cochabamba (área de SEMAPA)
 export const DISTRITOS = [
   "TUNARI", "MOLLE", "ALEJO CALATAYUD", "VALLE HERMOSO", "ITOCTA", "ADELA ZAMUDIO",
-  "SACABA", "QUILLACOLLO", "SIPE SIPE", "TIQUIPAYA", "COLCAPIRHUA", "VINTO",
-  "CERCADO", "PUNATA"
 ];
 
 export const ZONAS_POR_DISTRITO = {
@@ -19,11 +18,12 @@ export const ZONAS_POR_DISTRITO = {
 
 export const MODELOS_MEDIDORES = ["ITC 100", "Siconia WATER WM-NB", "OY1320 LoRaWAN", "WP20", "Medidor 100% IoT"];
 
+// 14 radiobases LoRaWAN dentro del Cercado de Cochabamba
 export const RADIOBASES = [
   "LoRaWan-ParqueLincon", "LoRaWan-Teleferico", "LoRaWan-Petrolera", "LoRaWan-ParqueVial",
-  "LoRaWan-CentroHistorico", "LoRaWan-Aeropuerto", "LoRaWan-Colcapirhua",
-  "LoRaWan-Quillacollo", "LoRaWan-Sacaba", "LoRaWan-Tiquipaya",
-  "LoRaWan-VdeLago", "LoRaWan-Sipe", "LoRaWan-Vinto", "LoRaWan-Punata"
+  "LoRaWan-CentroHistorico", "LoRaWan-Aeropuerto", "LoRaWan-Sarco",
+  "LoRaWan-Alalay", "LoRaWan-Tamborada", "LoRaWan-Hipodromo",
+  "LoRaWan-CalaCala", "LoRaWan-VillaAdela", "LoRaWan-LaMarofa", "LoRaWan-ConoSur"
 ];
 
 // KPIs principales Dashboard 1 - Alcaldía
@@ -182,7 +182,7 @@ export const consumoPorTarifaDistrito = [
   { distrito: "ADELA ZAMUDIO", Residencial: 2941, Comercial: 9956, "Comercial Especial": 1429, Industrial: 5523, Preferencial: 7759, Social: 1280 },
 ];
 
-// Facturación por distrito (Bs)
+// Facturación por distrito (Bs) — solo 6 sub-alcaldías del Cercado
 export const facturacionPorDistrito = [
   { distrito: "TUNARI", monto: 9234567, variacion: 4.2 },
   { distrito: "MOLLE", monto: 8123456, variacion: 3.1 },
@@ -190,8 +190,6 @@ export const facturacionPorDistrito = [
   { distrito: "VALLE HERMOSO", monto: 6789012, variacion: 2.9 },
   { distrito: "ITOCTA", monto: 5678901, variacion: -1.2 },
   { distrito: "ADELA ZAMUDIO", monto: 4567890, variacion: 7.3 },
-  { distrito: "SACABA", monto: 3456789, variacion: 6.1 },
-  { distrito: "QUILLACOLLO", monto: 2345678, variacion: 3.7 },
 ];
 
 // Proyección de ingresos por tarifa

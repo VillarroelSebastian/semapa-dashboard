@@ -14,6 +14,8 @@ import {
   getConsumoHora, transformConsumoHora,
   getConsumoSemana, transformComparativa,
   getConsumoExcesivo, getMedidoresResumenZona,
+  getConsumoTarifaDistrito, getConexionesRadiobase,
+  getTopConsumidores,
 } from '../api/semapa';
 
 // ── Colores hardcoded para el panel CQL (tema oscuro propio) ──────
@@ -135,6 +137,9 @@ export default function ConsultasCQL() {
   const [liveQ2, setLiveQ2]   = useState(null);
   const [liveQ3, setLiveQ3]   = useState(null);
   const [liveQ4, setLiveQ4]   = useState(null);
+  const [liveQ7, setLiveQ7]   = useState(null);
+  const [liveQ12, setLiveQ12] = useState(null);
+  const [liveQ17, setLiveQ17] = useState(null);
   const [apiVivo, setApiVivo] = useState(false);
 
   useEffect(() => {
@@ -157,6 +162,18 @@ export default function ConsultasCQL() {
     getMedidoresResumenZona()
       .then(d => { if (d.length > 0) { setLiveQ4(d); setApiVivo(true); }})
       .catch(() => {});
+
+    getConsumoTarifaDistrito(MES)
+      .then(d => { if (d.length > 0) setLiveQ7(d); })
+      .catch(() => {});
+
+    getTopConsumidores(MES)
+      .then(d => { if (d.length > 0) setLiveQ12(d); })
+      .catch(() => {});
+
+    getConexionesRadiobase()
+      .then(d => { if (d.length > 0) setLiveQ17(d); })
+      .catch(() => {});
   }, []);
 
   const renderQuery = () => {
@@ -167,15 +184,15 @@ export default function ConsultasCQL() {
       case 4: return <Query4 liveData={liveQ4} />;
       case 5: return <Query5 liveData={liveQ4} />;
       case 6: return <Query6 />;
-      case 7: return <Query7 />;
+      case 7: return <Query7 liveData={liveQ7} />;
       case 8: return <Query8 />;
       case 9: return <Query9 />;
       case 10: return <Query10 />;
       case 11: return <Query11 />;
-      case 12: return <Query12 />;
+      case 12: return <Query12 liveData={liveQ12} />;
       case 13: return <Query13 />;
       case 15: return <Query15 />;
-      case 17: return <Query17 />;
+      case 17: return <Query17 liveData={liveQ17} />;
       case 18: return <Query18 />;
       case 20: return <Query20 />;
       case 21: return <Query21 />;
@@ -532,10 +549,12 @@ ORDER BY total_fallos DESC;`} />
   );
 }
 
-function Query7() {
+function Query7({ liveData }) {
+  const isLive = !!liveData && liveData.length > 0;
   return (
     <div>
       <QueryHeader num={7} title="¿Consumo promedio mensual en m³ por tarifa y distrito?" />
+      {isLive && <div style={{ marginBottom: 10, fontSize: 11, color: '#0d9488', fontWeight: 600 }}>★ Datos en vivo desde Cassandra</div>}
       <CqlCode code={`-- Tabla: consumo_por_tarifa_distrito
 -- Partition Key: (anio_mes, distrito) | Clustering: tarifa
 
@@ -567,15 +586,15 @@ GROUP BY distrito, tarifa;`} />
             </tr>
           </thead>
           <tbody>
-            {consumoPorTarifaDistrito.map((row, i) => (
+            {(isLive ? liveData : consumoPorTarifaDistrito).map((row, i) => (
               <tr key={i}>
                 <td style={{ fontWeight: 600 }}>{row.distrito}</td>
-                <td>{row.Residencial.toLocaleString()}</td>
-                <td>{row.Comercial.toLocaleString()}</td>
-                <td>{row['Comercial Especial'].toLocaleString()}</td>
-                <td>{row.Industrial.toLocaleString()}</td>
-                <td>{row.Preferencial.toLocaleString()}</td>
-                <td>{row.Social.toLocaleString()}</td>
+                <td>{(row.Residencial ?? row.R1 ?? row.R2 ?? 0).toLocaleString()}</td>
+                <td>{(row.Comercial ?? row.C ?? 0).toLocaleString()}</td>
+                <td>{(row['Comercial Especial'] ?? row.CE ?? 0).toLocaleString()}</td>
+                <td>{(row.Industrial ?? row.I ?? 0).toLocaleString()}</td>
+                <td>{(row.Preferencial ?? row.P ?? 0).toLocaleString()}</td>
+                <td>{(row.Social ?? row.S ?? 0).toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
@@ -735,10 +754,12 @@ ORDER BY percapita DESC;`} />
   );
 }
 
-function Query12() {
+function Query12({ liveData }) {
+  const isLive = !!liveData && liveData.length > 0;
   return (
     <div>
       <QueryHeader num={12} title="Top 3 clientes/servicios que más consumen por cada Distrito del mes activo" />
+      {isLive && <div style={{ marginBottom: 10, fontSize: 11, color: '#0d9488', fontWeight: 600 }}>★ Datos en vivo desde Cassandra</div>}
       <CqlCode code={`-- Tabla: top_consumidores_distrito
 -- Partition Key: (mes, distrito) | Clustering: consumo_m3 DESC
 
@@ -758,7 +779,11 @@ LIMIT 3;
 -- Ejecutar por cada distrito`} />
       <ResultTable
         headers={['Distrito', 'Servicio', 'Cliente', 'Consumo m³']}
-        rows={topConsumidoresPorDistrito.map(c => [c.distrito, c.servicio, c.cliente, c.consumo])}
+        rows={isLive
+          ? liveData.slice(0, 18).map(c => [
+              c.distrito, c.contrato ?? c.servicio, c.cliente, (c.consumo_m3 ?? c.consumo ?? 0).toFixed(1)
+            ])
+          : topConsumidoresPorDistrito.map(c => [c.distrito, c.servicio, c.cliente, c.consumo])}
       />
     </div>
   );
@@ -823,10 +848,12 @@ ORDER BY nro_reportes DESC;`} />
   );
 }
 
-function Query17() {
+function Query17({ liveData }) {
+  const isLive = !!liveData && liveData.length > 0;
   return (
     <div>
       <QueryHeader num={17} title="¿Qué zonas tienen mayor cobertura de antenas LoRaWAN?" />
+      {isLive && <div style={{ marginBottom: 10, fontSize: 11, color: '#0d9488', fontWeight: 600 }}>★ Datos en vivo desde Cassandra</div>}
       <CqlCode code={`-- Tabla: cobertura_antenas
 -- Partition Key: radiobase | Clustering: conexiones DESC, zona
 
@@ -842,7 +869,9 @@ FROM semapa_iot.cobertura_antenas
 ORDER BY conexiones DESC;`} />
       <ResultTable
         headers={['RadioBase', 'Zona', 'Conexiones']}
-        rows={coberturaAntenas.map(c => [c.radioBase, c.zona, c.conexiones.toLocaleString()])}
+        rows={isLive
+          ? liveData.slice(0, 20).map(c => [c.radiobase, c.zona, (c.conexiones ?? 0).toLocaleString()])
+          : coberturaAntenas.map(c => [c.radioBase, c.zona, c.conexiones.toLocaleString()])}
       />
     </div>
   );

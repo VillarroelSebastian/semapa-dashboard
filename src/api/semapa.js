@@ -117,6 +117,18 @@ export async function getKPIsResumen(mes) {
   return r.json()
 }
 
+// ── Consumo promedio por tarifa y distrito (Q7) ──────────────
+// GET /api/consumo/tarifa-distrito?mes=YYYY-MM
+// Respuesta: [{distrito, R1, R2, R3, R4, C, CE, I, P, S}, ...]
+export const getConsumoTarifaDistrito = (mes) =>
+  get(`/consumo/tarifa-distrito?mes=${mes}`)
+
+// ── Conexiones por radiobase y zona (Q17) ────────────────────
+// GET /api/conexiones/radiobase
+// Respuesta: [{radiobase, zona, conexiones}, ...]
+export const getConexionesRadiobase = () =>
+  get(`/conexiones/radiobase`)
+
 // ── Registrar nueva lectura (App Móvil) ──────────────────────
 // POST /api/lectura  { medidor_iot, lectura_actual, fecha }
 export async function postLectura(medidor_iot, lectura_actual, fecha) {

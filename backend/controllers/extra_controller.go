@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"math"
 	"net/http"
 	"semapa/backend/database"
 	"sort"
@@ -8,9 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// 6 sub-alcaldías del Cercado de Cochabamba (único área de SEMAPA)
 var distritosList = []string{
 	"TUNARI", "MOLLE", "ALEJO CALATAYUD", "VALLE HERMOSO",
-	"ITOCTA", "ADELA ZAMUDIO", "SACABA", "QUILLACOLLO",
+	"ITOCTA", "ADELA ZAMUDIO",
 }
 
 // GET /api/top-consumidores?mes=YYYY-MM
@@ -130,6 +132,83 @@ func GetMedidoresResumenZona(c *gin.Context) {
 	sort.Slice(result, func(i, j int) bool {
 		return result[i]["activos"].(int) > result[j]["activos"].(int)
 	})
+	c.JSON(http.StatusOK, result)
+}
+
+// GET /api/consumo/tarifa-distrito?mes=YYYY-MM
+// Q7: consumo promedio mensual en m³ por tarifa y distrito (tabla consumo_tarifa_distrito_mes)
+func GetConsumoTarifaDistrito(c *gin.Context) {
+	yearMonth := c.Query("mes")
+	if yearMonth == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "mes requerido (YYYY-MM)"})
+		return
+	}
+
+	type Row struct {
+		Distrito string
+		Tarifas  map[string]float64
+	}
+	totals := make(map[string]map[string]float64)
+
+	for _, distrito := range distritosList {
+		var tarifa string
+		var consumo_m3 float64
+		iter := database.Session.Query(
+			`SELECT tarifa, consumo_promedio_m3
+			 FROM consumo_tarifa_distrito_mes
+			 WHERE distrito = ? AND year_month = ?`,
+			distrito, yearMonth).Iter()
+		for iter.Scan(&tarifa, &consumo_m3) {
+			if totals[distrito] == nil {
+				totals[distrito] = make(map[string]float64)
+			}
+			totals[distrito][tarifa] += consumo_m3
+		}
+	}
+
+	var result []map[string]interface{}
+	for distrito, tarifas := range totals {
+		row := map[string]interface{}{"distrito": distrito}
+		for tarifa, consumo := range tarifas {
+			row[tarifa] = math.Round(consumo)
+		}
+		result = append(result, row)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i]["distrito"].(string) < result[j]["distrito"].(string)
+	})
+	c.JSON(http.StatusOK, result)
+}
+
+// GET /api/conexiones/radiobase
+// Q17: conexiones por radiobase y zona (tabla conexiones_radiobase_zona)
+func GetConexionesRadiobase(c *gin.Context) {
+	type Key struct{ Radiobase, Zona string }
+	counts := make(map[Key]int)
+
+	var radiobase, zona string
+	var conexiones int
+	iter := database.Session.Query(
+		`SELECT radiobase, zona, conexiones
+		 FROM conexiones_radiobase_zona ALLOW FILTERING LIMIT 500000`).Iter()
+	for iter.Scan(&radiobase, &zona, &conexiones) {
+		counts[Key{radiobase, zona}] += conexiones
+	}
+
+	var result []map[string]interface{}
+	for k, total := range counts {
+		result = append(result, map[string]interface{}{
+			"radiobase":  k.Radiobase,
+			"zona":       k.Zona,
+			"conexiones": total,
+		})
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i]["conexiones"].(int) > result[j]["conexiones"].(int)
+	})
+	if len(result) > 50 {
+		result = result[:50]
+	}
 	c.JSON(http.StatusOK, result)
 }
 
