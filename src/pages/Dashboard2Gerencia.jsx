@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -8,6 +9,11 @@ import {
   medidoresFueraDeSservicio, fallosPorModelo, lecturasFallidasPorModelo,
   consumoPorDistritoHorario, comparativa4Semanas, consumoAnomaloPorModelo
 } from '../data/mockData';
+import {
+  getConsumoHora, transformConsumoHora,
+  getConsumoSemana, transformComparativa,
+  getConsumoExcesivo,
+} from '../api/semapa';
 
 const COLORS = ['#0d9488','#0369a1','#059669','#b45309','#be123c','#6d28d9','#0891b2','#65a30d','#ea580c','#7c3aed'];
 
@@ -32,10 +38,10 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-// Consumo horario promedio (histograma)
-const consumoHorario = Array.from({ length: 24 }, (_, h) => ({
+// Consumo horario base (mock fallback mientras carga la API)
+const consumoHorarioMock = Array.from({ length: 24 }, (_, h) => ({
   hora: `${h.toString().padStart(2, '0')}:00`,
-  consumo: Math.floor(3000 + Math.sin((h - 6) * Math.PI / 12) * 8000 + Math.random() * 1000)
+  consumo: Math.floor(3000 + Math.sin((h - 6) * Math.PI / 12) * 8000 + 500)
 }));
 
 // Estado medidores pie
@@ -57,8 +63,8 @@ const anomalias = [
   { zona: 'CONDEBAMBA', tipo: 'Lectura atípica', gravedad: 'Media', reportes: 119 },
 ];
 
-// Comparativa 4 semanas para 3 distritos
-const sem4Data = comparativa4Semanas;
+// sem4Data proviene del estado (API o mock fallback)
+// se accede como comparativaData desde el estado del componente
 
 // Fallas por modelo (agregado)
 const fallasPorModeloAgg = fallosPorModelo.map(f => ({
@@ -72,7 +78,45 @@ const estadoContratos = [
   { estado: 'Suspendidos', valor: 1766 },
 ];
 
+const HOY = new Date().toISOString().split('T')[0];      // YYYY-MM-DD
+const MES = HOY.substring(0, 7);                         // YYYY-MM
+const ANIO = HOY.substring(0, 4);                        // YYYY
+const DISTRITOS_COMP = ['TUNARI', 'MOLLE', 'ALEJO CALATAYUD', 'VALLE HERMOSO'];
+
 export default function Dashboard2Gerencia() {
+  const [consumoHorario, setConsumoHorario]       = useState(consumoHorarioMock);
+  const [comparativaData, setComparativaData]     = useState(comparativa4Semanas);
+  const [excesivos, setExcesivos]                 = useState([]);
+  const [apiVivo, setApiVivo]                     = useState(false);
+
+  useEffect(() => {
+    // Histograma horario — GET /api/consumo/distrito/hora
+    getConsumoHora('TUNARI', HOY)
+      .then(data => {
+        if (data.length > 0) {
+          setConsumoHorario(transformConsumoHora(data));
+          setApiVivo(true);
+        }
+      })
+      .catch(() => {});
+
+    // Comparativa 4 semanas — GET /api/consumo/distrito/semana (4 distritos en paralelo)
+    Promise.all(DISTRITOS_COMP.map(d => getConsumoSemana(d, ANIO).catch(() => [])))
+      .then(results => {
+        const byDistrict = Object.fromEntries(
+          DISTRITOS_COMP.map((d, i) => [d, results[i]])
+        );
+        const merged = transformComparativa(byDistrict);
+        if (merged.length > 0) setComparativaData(merged);
+      })
+      .catch(() => {});
+
+    // Contratos excesivos — GET /api/consumo/excesivo
+    getConsumoExcesivo(MES)
+      .then(data => { if (data.length > 0) setExcesivos(data); })
+      .catch(() => {});
+  }, []);
+
   return (
     <div>
       <div className="page-header">
@@ -81,9 +125,9 @@ export default function Dashboard2Gerencia() {
           <p>Eficiencia operativa · Control de servicio · Anomalías · Comercial</p>
         </div>
         <div className="page-header-badges">
-          <div className="badge-pill live">
+          <div className={`badge-pill ${apiVivo ? 'live' : ''}`} style={apiVivo ? {} : {background:'#fef3c7',color:'#92400e',borderColor:'#fcd34d'}}>
             <span style={{width:6,height:6,borderRadius:'50%',background:'currentColor',display:'inline-block'}} />
-            Operacional
+            {apiVivo ? 'API en vivo' : 'Simulado'}
           </div>
           <div className="badge-pill" style={{display:'flex',alignItems:'center',gap:5}}>
             <Ico n="calendar" s={13} c="#64748b" /> Mayo 2026
@@ -206,7 +250,7 @@ export default function Dashboard2Gerencia() {
               <span className="chart-tag blue">Comparativa</span>
             </div>
             <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={sem4Data}>
+              <LineChart data={comparativaData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="semana" stroke="#94a3b8" fontSize={12} />
                 <YAxis stroke="#94a3b8" fontSize={11} tickFormatter={v => (v/1000).toFixed(0)+'k'} />
@@ -426,6 +470,61 @@ export default function Dashboard2Gerencia() {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Contratos con consumo excesivo >45 m³ — Query 3 */}
+        <div className="section-header" style={{ marginTop: 8 }}>
+          <span className="section-badge" style={{ background: 'linear-gradient(135deg,#be123c,#b45309)' }}>Q3</span>
+          <div>
+            <h2>Contratos con Consumo Excesivo — Residencial &gt;45 m³</h2>
+            <p>300 L/día × 30 días × 5 hab = 45 m³ límite ONU · {apiVivo ? 'Datos en vivo' : 'Datos simulados'}</p>
+          </div>
+        </div>
+        <div className="chart-card" style={{ marginBottom: 12 }}>
+          <div className="chart-card-header">
+            <div>
+              <h3>Contratos Residenciales con Sobreconsumo</h3>
+              <p>Contratos que superaron el límite de consumo normal — mes activo</p>
+            </div>
+            <span className="chart-tag red">Obligatorio</span>
+          </div>
+          {excesivos.length > 0 ? (
+            <div style={{ overflowX: 'auto' }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Contrato</th>
+                    <th>Tarifa</th>
+                    <th style={{ textAlign: 'right' }}>Consumo m³</th>
+                    <th style={{ textAlign: 'right' }}>Exceso %</th>
+                    <th>Nivel</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {excesivos.slice(0, 20).map((c, i) => (
+                    <tr key={i}>
+                      <td style={{ fontWeight: 600 }}>{c.contrato}</td>
+                      <td><span className="chip chip-info">{c.tarifa}</span></td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--rose)' }}>{c.consumo_m3?.toFixed(1)} m³</td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: c.exceso_porcentaje > 50 ? 'var(--rose)' : 'var(--amber)' }}>
+                        +{c.exceso_porcentaje?.toFixed(1)}%
+                      </td>
+                      <td>
+                        <span className={`chip ${c.exceso_porcentaje > 50 ? 'chip-danger' : 'chip-warning'}`}>
+                          {c.exceso_porcentaje > 50 ? 'Crítico' : 'Alto'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-m)', fontSize: 13 }}>
+              Sin datos de contratos excesivos para el período actual
+              <div style={{ fontSize: 11, marginTop: 4 }}>Conecta el backend para ver datos reales</div>
+            </div>
+          )}
         </div>
 
         {/* Medidores activos vs fuera de servicio por zona */}

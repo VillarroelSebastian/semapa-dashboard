@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  cassandra-1:
+    image: cassandra:4.1
+    container_name: cassandra-1
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=semapa_cluster
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - CASSANDRA_DC=dc1
+    volumes:
+      - cassandra-1_data:/var/lib/cassandra
+      - ./db/init.cql:/docker-entrypoint-initdb.d/init.cql
+    networks:
+      - semapa-net
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -u cassandra -p cassandra -e 'DESCRIBE KEYSPACES' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  cassandra-2:
+    image: cassandra:4.1
+    container_name: cassandra-2
+    environment:
+      - CASSANDRA_CLUSTER_NAME=semapa_cluster
+      - CASSANDRA_SEEDS=cassandra-1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - CASSANDRA_DC=dc1
+    depends_on:
+      cassandra-1:
+        condition: service_healthy
+    volumes:
+      - cassandra-2_data:/var/lib/cassandra
+    networks:
+      - semapa-net
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -u cassandra -p cassandra -e 'DESCRIBE KEYSPACES' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: semapa-backend
+    ports:
+      - "8080:8080"
+    networks:
+      - semapa-net
+    depends_on:
+      cassandra-1:
+        condition: service_healthy
+
+volumes:
+  cassandra-1_data:
+  cassandra-2_data:
+
+networks:
+  semapa-net:
+    driver: bridge

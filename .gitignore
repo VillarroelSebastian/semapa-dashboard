@@ -31,3 +31,9 @@ check_errors.mjs
 check_full.mjs
 verify.mjs
 screen_check.png
+
+# Go build artifacts
+backend/semapa-backend
+etl/semapa-etl
+*/bin/
+*.exe

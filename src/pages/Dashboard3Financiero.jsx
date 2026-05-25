@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -8,6 +9,7 @@ import {
   carteraVencidaAging, efectividadCanal, proyeccionFlujo3Meses,
   impactoCambioTarifa, consumoPorTarifaDistrito
 } from '../data/mockData';
+import { getIngresosProyeccion, transformIngresos } from '../api/semapa';
 
 const COLORS = ['#0d9488','#0369a1','#059669','#b45309','#be123c','#6d28d9','#0891b2','#65a30d','#ea580c'];
 
@@ -75,7 +77,24 @@ const embudoCobranza = [
   { name: 'Pagaron', value: 5197 },
 ];
 
+const MES_ACTIVO = new Date().toISOString().substring(0, 7); // YYYY-MM
+
 export default function Dashboard3Financiero() {
+  const [ingresosData, setIngresosData] = useState(proyeccionIngresosTarifa);
+  const [apiVivo, setApiVivo]           = useState(false);
+
+  useEffect(() => {
+    // Proyección de ingresos por tarifa — GET /api/ingresos/proyeccion
+    getIngresosProyeccion(MES_ACTIVO)
+      .then(data => {
+        if (data.length > 0) {
+          setIngresosData(transformIngresos(data));
+          setApiVivo(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div>
       <div className="page-header">
@@ -84,9 +103,9 @@ export default function Dashboard3Financiero() {
           <p>Facturación · Recaudación · Morosidad · Preavisos · Proyección financiera</p>
         </div>
         <div className="page-header-badges">
-          <div className="badge-pill live">
+          <div className={`badge-pill ${apiVivo ? 'live' : ''}`} style={apiVivo ? {} : {background:'#fef3c7',color:'#92400e',borderColor:'#fcd34d'}}>
             <span style={{width:6,height:6,borderRadius:'50%',background:'currentColor',display:'inline-block'}} />
-            Actualizado
+            {apiVivo ? 'API en vivo' : 'Simulado'}
           </div>
           <div className="badge-pill" style={{display:'flex',alignItems:'center',gap:5}}>
             <Ico n="calendar" s={13} c="#64748b" /> Mayo 2026
@@ -255,8 +274,8 @@ export default function Dashboard3Financiero() {
                 </tr>
               </thead>
               <tbody>
-                {proyeccionIngresosTarifa.map((row, i) => {
-                  const totalUSD = proyeccionIngresosTarifa.reduce((a, b) => a + b.ingresoUSD, 0);
+                {ingresosData.map((row, i) => {
+                  const totalUSD = ingresosData.reduce((a, b) => a + b.ingresoUSD, 0);
                   const pct = (row.ingresoUSD / totalUSD * 100).toFixed(1);
                   return (
                     <tr key={i}>
