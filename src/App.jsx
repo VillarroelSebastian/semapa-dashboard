@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import Dashboard1Alcaldia from './pages/Dashboard1Alcaldia';
 import Dashboard2Gerencia from './pages/Dashboard2Gerencia';
 import Dashboard3Financiero from './pages/Dashboard3Financiero';
+import ConsultasCQL from './pages/ConsultasCQL';
 import './index.css';
 
 const Ico = ({ n, s = 16, c = '#64748b' }) => (
@@ -11,9 +12,10 @@ const Ico = ({ n, s = 16, c = '#64748b' }) => (
 );
 
 const NAV_TABS = [
-  { to: '/',          label: 'Alcaldía Municipal',  ico: 'building-2',   sub: 'Smart City · ODS'      },
-  { to: '/gerencia',  label: 'Gerencia SEMAPA',     ico: 'gauge',        sub: 'Gestión Operacional'   },
-  { to: '/financiero',label: 'Financiero',          ico: 'trending-up',  sub: 'Facturación · Mora'    },
+  { to: '/',           label: 'Alcaldía Municipal',  ico: 'building-2',   sub: 'Smart City · ODS'      },
+  { to: '/gerencia',   label: 'Gerencia SEMAPA',     ico: 'gauge',        sub: 'Gestión Operacional'   },
+  { to: '/financiero', label: 'Financiero',          ico: 'trending-up',  sub: 'Facturación · Mora'    },
+  { to: '/consultas',  label: 'Consultas CQL',       ico: 'terminal',     sub: 'Visor BigData'         },
 ];
 
 function LiveClock() {
@@ -93,6 +95,7 @@ export default function App() {
             <Route path="/"           element={<Dashboard1Alcaldia />} />
             <Route path="/gerencia"   element={<Dashboard2Gerencia />} />
             <Route path="/financiero" element={<Dashboard3Financiero />} />
+            <Route path="/consultas"  element={<ConsultasCQL />} />
           </Routes>
         </div>
       </div>

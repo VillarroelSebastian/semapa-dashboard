@@ -9,7 +9,7 @@ import {
   carteraVencidaAging, efectividadCanal, proyeccionFlujo3Meses,
   impactoCambioTarifa, consumoPorTarifaDistrito
 } from '../data/mockData';
-import { getIngresosProyeccion, transformIngresos } from '../api/semapa';
+import { getIngresosProyeccion, transformIngresos, getFacturacionDistrito } from '../api/semapa';
 
 const COLORS = ['#0d9488','#0369a1','#059669','#b45309','#be123c','#6d28d9','#0891b2','#65a30d','#ea580c'];
 
@@ -80,15 +80,24 @@ const embudoCobranza = [
 const MES_ACTIVO = new Date().toISOString().substring(0, 7); // YYYY-MM
 
 export default function Dashboard3Financiero() {
-  const [ingresosData, setIngresosData] = useState(proyeccionIngresosTarifa);
-  const [apiVivo, setApiVivo]           = useState(false);
+  const [ingresosData, setIngresosData]   = useState(proyeccionIngresosTarifa);
+  const [factDistrito, setFactDistrito]   = useState(facturacionPorDistrito);
+  const [apiVivo, setApiVivo]             = useState(false);
 
   useEffect(() => {
-    // Proyección de ingresos por tarifa — GET /api/ingresos/proyeccion
     getIngresosProyeccion(MES_ACTIVO)
       .then(data => {
         if (data.length > 0) {
           setIngresosData(transformIngresos(data));
+          setApiVivo(true);
+        }
+      })
+      .catch(() => {});
+
+    getFacturacionDistrito(MES_ACTIVO)
+      .then(data => {
+        if (data.length > 0) {
+          setFactDistrito(data.map(d => ({ distrito: d.distrito, monto: Math.round(d.monto_bs) })));
           setApiVivo(true);
         }
       })
@@ -199,13 +208,13 @@ export default function Dashboard3Financiero() {
               <span className="chart-tag red">Obligatorio</span>
             </div>
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={facturacionPorDistrito} layout="vertical">
+              <BarChart data={factDistrito} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
                 <XAxis type="number" stroke="#94a3b8" fontSize={11} tickFormatter={v => 'Bs ' + (v / 1_000_000).toFixed(1) + 'M'} />
                 <YAxis type="category" dataKey="distrito" stroke="#94a3b8" fontSize={11} width={110} />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="monto" name="Monto facturado (Bs)" radius={[0, 4, 4, 0]}>
-                  {facturacionPorDistrito.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  {factDistrito.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>

@@ -90,6 +90,33 @@ export const getDeudasCatastro = (catastro) =>
 export const getFacturasPropietario = (propietario) =>
   get(`/propietario/facturas?propietario=${encodeURIComponent(propietario)}`)
 
+// ── Top consumidores por distrito ───────────────────────────
+// GET /api/top-consumidores?mes=YYYY-MM
+// Respuesta: [{distrito, contrato, cliente, servicio, consumo_m3}, ...]
+export const getTopConsumidores = (mes) =>
+  get(`/top-consumidores?mes=${mes}`)
+
+// ── Facturación por distrito ─────────────────────────────────
+// GET /api/facturacion/distrito?mes=YYYY-MM
+// Respuesta: [{distrito, consumo_m3, monto_bs}, ...]
+export const getFacturacionDistrito = (mes) =>
+  get(`/facturacion/distrito?mes=${mes}`)
+
+// ── Medidores activos/inactivos por zona ─────────────────────
+// GET /api/medidores/resumen-zona
+// Respuesta: [{distrito, zona, activos, inactivos}, ...]
+export const getMedidoresResumenZona = () =>
+  get(`/medidores/resumen-zona`)
+
+// ── KPIs generales del mes ───────────────────────────────────
+// GET /api/kpis/resumen?mes=YYYY-MM
+// Respuesta: {medidores_activos, medidores_inactivos, total_medidores, pct_fallas, total_consumo_m3, total_ingreso_bs, total_ingreso_usd, total_contratos, mes}
+export async function getKPIsResumen(mes) {
+  const r = await fetch(`${BASE}/kpis/resumen${mes ? `?mes=${mes}` : ''}`)
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  return r.json()
+}
+
 // ── Registrar nueva lectura (App Móvil) ──────────────────────
 // POST /api/lectura  { medidor_iot, lectura_actual, fecha }
 export async function postLectura(medidor_iot, lectura_actual, fecha) {

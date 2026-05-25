@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Tooltip as MapTip } from 'react-leaflet';
 import {
   AreaChart, Area, BarChart, Bar, ComposedChart,
@@ -6,6 +7,7 @@ import {
   PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ScatterChart, Scatter, Cell, PieChart, Pie, Line
 } from 'recharts';
+import { getKPIsResumen } from '../api/semapa';
 const Ico = ({ n, s = 18, c = '#64748b' }) => (
   <img src={`https://api.iconify.design/lucide:${n}.svg?color=${encodeURIComponent(c)}`}
     width={s} height={s} alt="" style={{ display:'block', flexShrink:0 }} />
@@ -333,10 +335,27 @@ const pieEstado = [
   {name:'Sin señal', value:880},
 ];
 
+const MES_HOY = new Date().toISOString().substring(0, 7);
+
 /* ══════════════════════════════════════════════════
    COMPONENTE PRINCIPAL
    ══════════════════════════════════════════════════ */
 export default function Dashboard1Alcaldia() {
+  const [kpis, setKpis] = useState(null);
+  const [apiVivo, setApiVivo] = useState(false);
+
+  useEffect(() => {
+    getKPIsResumen(MES_HOY)
+      .then(data => { setKpis(data); setApiVivo(true); })
+      .catch(() => {});
+  }, []);
+
+  const medActivos   = kpis?.medidores_activos  ?? 114230;
+  const medInactivos = kpis?.medidores_inactivos ?? 4890;
+  const pctFallas    = kpis ? kpis.pct_fallas.toFixed(2) : '4.81';
+  const totalConsumo = kpis ? (kpis.total_consumo_m3 / 1000).toFixed(1) + 'k' : '245.8 k';
+  const totalContrs  = kpis?.total_contratos ?? 98234;
+
   return (
     <div>
 
@@ -347,9 +366,9 @@ export default function Dashboard1Alcaldia() {
           <p>Indicadores ODS · Cobertura hídrica · Impacto climático · Infraestructura IoT · 120 000 medidores</p>
         </div>
         <div className="page-header-badges">
-          <div className="badge-pill live">
+          <div className={`badge-pill ${apiVivo ? 'live' : ''}`} style={apiVivo ? {} : {background:'#fef3c7',color:'#92400e',borderColor:'#fcd34d'}}>
             <span style={{width:6,height:6,borderRadius:'50%',background:'currentColor',display:'inline-block'}} />
-            Tiempo real
+            {apiVivo ? 'API en vivo' : 'Simulado'}
           </div>
           <div className="badge-pill">Feb – Abr 2026</div>
           <div className="badge-pill">Cbba, Bolivia</div>
@@ -358,7 +377,17 @@ export default function Dashboard1Alcaldia() {
 
       {/* ── KPI Ticker ───────────────────────────── */}
       <div className="kpi-ticker">
-        {TICKER.map((t,i) => (
+        {[
+          { ico:'droplets',       c:'#0d9488', val:'87.4%',          label:'Cobertura potable',     cls:'good'     },
+          { ico:'home',           c:'#059669', val:'82.1%',          label:'Hogares conectados',    cls:'good'     },
+          { ico:'bar-chart-3',    c:'#0369a1', val:totalConsumo,     label:'m³ consumidos / día',   cls:'info'     },
+          { ico:'radio',          c:'#059669', val:medActivos.toLocaleString(), label:'Medidores IoT activos', cls:'good' },
+          { ico:'x-circle',       c:'#b45309', val:`${pctFallas} %`, label:'Sensores con fallas',   cls:'warning'  },
+          { ico:'alert-triangle', c:'#be123c', val:'342',            label:'Alertas sobreconsumo',  cls:'critical' },
+          { ico:'thermometer',    c:'#be123c', val:'8 zonas',        label:'Estrés hídrico crítico',cls:'critical' },
+          { ico:'wifi',           c:'#059669', val:'91.3 %',         label:'Calidad señal LoRaWAN', cls:'good'     },
+          { ico:'zap',            c:'#0369a1', val:totalContrs.toLocaleString(), label:'Contratos activos', cls:'info' },
+        ].map((t,i) => (
           <div key={i} className={`ticker-item ${t.cls}`}>
             <span className="ticker-icon"><Ico n={t.ico} s={18} c={t.c} /></span>
             <div>

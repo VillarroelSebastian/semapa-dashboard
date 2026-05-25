@@ -13,6 +13,8 @@ import {
   getConsumoHora, transformConsumoHora,
   getConsumoSemana, transformComparativa,
   getConsumoExcesivo,
+  getMedidoresResumenZona,
+  getTopConsumidores,
 } from '../api/semapa';
 
 const COLORS = ['#0d9488','#0369a1','#059669','#b45309','#be123c','#6d28d9','#0891b2','#65a30d','#ea580c','#7c3aed'];
@@ -87,6 +89,8 @@ export default function Dashboard2Gerencia() {
   const [consumoHorario, setConsumoHorario]       = useState(consumoHorarioMock);
   const [comparativaData, setComparativaData]     = useState(comparativa4Semanas);
   const [excesivos, setExcesivos]                 = useState([]);
+  const [medZona, setMedZona]                     = useState([]);
+  const [topConsumidores, setTopConsumidores]     = useState([]);
   const [apiVivo, setApiVivo]                     = useState(false);
 
   useEffect(() => {
@@ -114,6 +118,16 @@ export default function Dashboard2Gerencia() {
     // Contratos excesivos — GET /api/consumo/excesivo
     getConsumoExcesivo(MES)
       .then(data => { if (data.length > 0) setExcesivos(data); })
+      .catch(() => {});
+
+    // Medidores por zona — GET /api/medidores/resumen-zona
+    getMedidoresResumenZona()
+      .then(data => { if (data.length > 0) setMedZona(data.slice(0, 10)); })
+      .catch(() => {});
+
+    // Top consumidores — GET /api/top-consumidores
+    getTopConsumidores(MES)
+      .then(data => { if (data.length > 0) setTopConsumidores(data.slice(0, 10)); })
       .catch(() => {});
   }, []);
 
@@ -270,66 +284,100 @@ export default function Dashboard2Gerencia() {
           <div className="chart-card">
             <div className="chart-card-header">
               <div>
-                <h3>Top 10 Zonas de Mayor Demanda</h3>
-                <p>Consumo acumulado en m³ — Ranking distrital</p>
+                <h3>Top Consumidores por Distrito</h3>
+                <p>Mayor consumo mensual m³ — {topConsumidores.length > 0 ? 'Datos en vivo' : 'Mock'}</p>
               </div>
               <span className="chart-tag red">Obligatorio</span>
             </div>
-            {top10ZonasDemanda.map((z, i) => (
-              <div key={i} className="ranking-item">
-                <div className={`ranking-num ${i < 3 ? 'top3' : ''}`}>{i + 1}</div>
-                <div className="ranking-info">
-                  <div className="ranking-name">{z.zona}</div>
-                  <div className="ranking-sub">{z.distrito}</div>
-                </div>
-                <div style={{ flex: 1, margin: '0 12px' }}>
-                  <div className="progress-bar" style={{ height: 8 }}>
-                    <div className="progress-fill" style={{
-                      width: `${(z.consumo / top10ZonasDemanda[0].consumo) * 100}%`,
-                      background: i < 3 ? 'linear-gradient(90deg, #ef4444, #f59e0b)' : 'var(--teal)'
-                    }} />
+            {(topConsumidores.length > 0 ? topConsumidores : top10ZonasDemanda.map(z => ({ cliente: z.zona, distrito: z.distrito, consumo_m3: z.consumo, contrato: '-' }))).map((z, i) => {
+              const maxVal = topConsumidores.length > 0
+                ? topConsumidores[0].consumo_m3
+                : top10ZonasDemanda[0]?.consumo;
+              const val = z.consumo_m3 ?? z.consumo ?? 0;
+              return (
+                <div key={i} className="ranking-item">
+                  <div className={`ranking-num ${i < 3 ? 'top3' : ''}`}>{i + 1}</div>
+                  <div className="ranking-info">
+                    <div className="ranking-name">{z.cliente ?? z.zona}</div>
+                    <div className="ranking-sub">{z.distrito} {z.contrato && z.contrato !== '-' ? `· ${z.contrato}` : ''}</div>
                   </div>
+                  <div style={{ flex: 1, margin: '0 12px' }}>
+                    <div className="progress-bar" style={{ height: 8 }}>
+                      <div className="progress-fill" style={{
+                        width: `${(val / (maxVal || 1)) * 100}%`,
+                        background: i < 3 ? 'linear-gradient(90deg, #ef4444, #f59e0b)' : 'var(--teal)'
+                      }} />
+                    </div>
+                  </div>
+                  <div className="ranking-val">{val.toLocaleString()} m³</div>
                 </div>
-                <div className="ranking-val">{z.consumo.toLocaleString()} m³</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="chart-card">
             <div className="chart-card-header">
               <div>
                 <h3>Estado del Parque de Medidores IoT</h3>
-                <p>Distribución total de 120.000 dispositivos</p>
+                <p>{medZona.length > 0 ? 'Datos en vivo por zona' : 'Distribución total de 120.000 dispositivos'}</p>
               </div>
               <span className="chart-tag red">Obligatorio</span>
             </div>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie data={pieEstadoMedidores} cx="50%" cy="50%" outerRadius={85}
-                  dataKey="value" nameKey="name"
-                  label={({ name, value, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
-                  labelLine={true} fontSize={10}>
-                  <Cell fill="#10b981" />
-                  <Cell fill="#f59e0b" />
-                  <Cell fill="#6366f1" />
-                  <Cell fill="#ef4444" />
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8, marginTop: 8 }}>
-              {[
-                { label: 'Activos', val: '114.230', color: 'var(--emerald)' },
-                { label: 'Inactivos', val: '4.890', color: 'var(--amber)' },
-                { label: 'Duplicando', val: '84', color: 'var(--violet)' },
-                { label: 'Sin señal', val: '796', color: 'var(--rose)' },
-              ].map((s, i) => (
-                <div key={i} style={{ background: 'var(--surface-3)', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.val}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-m)' }}>{s.label}</div>
+            {medZona.length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={medZona} layout="vertical" barSize={10}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                    <XAxis type="number" stroke="#94a3b8" fontSize={10} />
+                    <YAxis type="category" dataKey="zona" stroke="#94a3b8" fontSize={9} width={110} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="activos" name="Activos" fill="#10b981" stackId="a" radius={[0,0,0,0]} />
+                    <Bar dataKey="inactivos" name="Inactivos" fill="#f59e0b" stackId="a" radius={[0,3,3,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8, marginTop: 8 }}>
+                  {[
+                    { label: 'Activos', val: medZona.reduce((s,z)=>s+z.activos,0).toLocaleString(), color: 'var(--emerald)' },
+                    { label: 'Inactivos', val: medZona.reduce((s,z)=>s+z.inactivos,0).toLocaleString(), color: 'var(--amber)' },
+                  ].map((s, i) => (
+                    <div key={i} style={{ background: 'var(--surface-3)', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.val}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-m)' }}>{s.label}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={pieEstadoMedidores} cx="50%" cy="50%" outerRadius={85}
+                      dataKey="value" nameKey="name"
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                      labelLine={true} fontSize={10}>
+                      <Cell fill="#10b981" />
+                      <Cell fill="#f59e0b" />
+                      <Cell fill="#6366f1" />
+                      <Cell fill="#ef4444" />
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8, marginTop: 8 }}>
+                  {[
+                    { label: 'Activos', val: '114.230', color: 'var(--emerald)' },
+                    { label: 'Inactivos', val: '4.890', color: 'var(--amber)' },
+                    { label: 'Duplicando', val: '84', color: 'var(--violet)' },
+                    { label: 'Sin señal', val: '796', color: 'var(--rose)' },
+                  ].map((s, i) => (
+                    <div key={i} style={{ background: 'var(--surface-3)', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.val}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-m)' }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
